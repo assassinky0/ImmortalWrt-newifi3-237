@@ -1,0 +1,41 @@
+name: Build Newifi D2 Firmware
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨2点自动编译
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses-dev gawk git gettext libssl-dev xsltproc zlib1g-dev
+    
+    - name: Configure Build
+      run: |
+        git clone https://github.com/padavanonly/immortalwrt
+        cd immortalwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        make menuconfig  # 选择 Newifi D2 设备并保存配置
+
+    - name: Build Firmware
+      run: |
+        make -j$(nproc)
+    
+    - name: Upload Firmware
+      uses: actions/upload-artifact@v2
+      with:
+        name: Newifi-D2-Firmware
+        path: bin/targets/*/*/immortalwrt-*.bin
